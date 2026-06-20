@@ -1,5 +1,6 @@
-from PyQt5.QtWidgets import QMainWindow, QPushButton, QGridLayout, QWidget, QMessageBox, QLabel, QVBoxLayout, QGraphicsDropShadowEffect, QAction
-from PyQt5.QtGui import QColor, QFont, QLinearGradient, QBrush, QPen, QPainter, QFontMetrics
+from PyQt5.QtWidgets import QMainWindow, QPushButton, QGridLayout, QWidget, QMessageBox, QLabel, QVBoxLayout, \
+    QGraphicsDropShadowEffect, QAction, QDialog, QFormLayout, QLineEdit, QDialogButtonBox
+from PyQt5.QtGui import QColor, QFont, QLinearGradient, QBrush, QPen, QPainter, QFontMetrics, QIntValidator
 from PyQt5.QtCore import Qt, pyqtSignal
 
 from .minesweeper_env import MinesweeperEnv, CellState
@@ -76,6 +77,60 @@ class MinesweeperGame(QMainWindow):
         hardAction = QAction('Hard', self)
         hardAction.triggered.connect(lambda: self.newGame(30, 16, 99))
         gameMenu.addAction(hardAction)
+
+        customAction = QAction('Custom', self)
+        customAction.triggered.connect(self.customBoard)
+        gameMenu.addAction(customAction)
+
+    def customBoard(self):
+        def validateInput():
+            try:
+                rows = int(rows_input.text())
+                cols = int(cols_input.text())
+                mines = int(mines_input.text())
+                mines_input.validator().setRange(1, rows * cols - 1)
+
+                if not all([
+                    rows_input.hasAcceptableInput(),
+                    cols_input.hasAcceptableInput(),
+                    mines_input.hasAcceptableInput()
+                ]):
+                    raise ValueError("Input out of range")
+
+                # 如果所有输入都有效，调用 newGame 并关闭对话框
+                self.newGame(rows, cols, mines)
+                dialog.accept()
+
+            except ValueError as e:
+                # 显示错误消息框
+                QMessageBox.warning(self, "Invalid Input", str(e) + "\nPlease enter values again.")
+
+        dialog = QDialog(self, Qt.WindowSystemMenuHint | Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
+        dialog.setWindowTitle('Custom Board')
+
+        layout = QVBoxLayout(dialog)
+
+        form_layout = QFormLayout()
+        layout.addLayout(form_layout)
+
+        rows_input = QLineEdit(dialog)
+        rows_input.setValidator(QIntValidator(1, 50, dialog))
+        form_layout.addRow('rows(1-50):', rows_input)
+
+        cols_input = QLineEdit(dialog)
+        cols_input.setValidator(QIntValidator(1, 50, dialog))
+        form_layout.addRow('columns(1-50):', cols_input)
+
+        mines_input = QLineEdit(dialog)
+        mines_input.setValidator(QIntValidator(dialog))
+        form_layout.addRow('mines:', mines_input)
+
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, dialog)
+        button_box.accepted.connect(validateInput)
+        button_box.rejected.connect(dialog.reject)
+        layout.addWidget(button_box)
+
+        dialog.exec()
 
     def add_cell(self, row, col):
         button = Cell(row, col, self.dpi)
